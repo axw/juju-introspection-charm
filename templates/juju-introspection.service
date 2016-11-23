@@ -1,0 +1,10 @@
+[Unit]
+Description=JujuIntrospection
+
+[Service]
+ExecStart={{executable}} -addr "{{addr}}" -hook "{{hook}}"
+Restart=on-failure
+TimeoutSec=300
+
+[Install]
+WantedBy=multi-user.target

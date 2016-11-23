@@ -1,0 +1,6 @@
+options:
+  port:
+    type: int
+    default: 19090
+    description: "Port to expose the introspection service on."
+

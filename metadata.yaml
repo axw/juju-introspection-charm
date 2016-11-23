@@ -1,0 +1,21 @@
+name: juju-introspection
+summary: An HTTP service to introspection Juju controllers and agents.
+maintainer: Andrew Wilkins <andrew.wilkins@canonical.com>
+description: |
+  An HTTP service to introspection Juju controllers and agents.
+
+  This charm manages an HTTP service that proxies through to
+  the Juju introspection sockets. Each agent on the same
+  machine as the HTTP service can be queried using the agent's
+  tag, e.g. /agents/machine-0/metrics.
+
+  This charm can relate to Prometheus, keeping track of agents
+  on the machine, and publishing their metrics endpoints.
+tags:
+  - monitoring
+subordinate: false
+series:
+ - xenial
+provides:
+  prometheus:
+    interface: prometheus

@@ -1,0 +1,7 @@
+includes:
+  - 'layer:basic'
+  - 'interface:prometheus'
+options:
+  basic:
+    packages: ['golang-go']
+repo: github.com:axw/juju-introspection-charm

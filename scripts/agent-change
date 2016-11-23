@@ -1,0 +1,14 @@
+#!/usr/bin/python3
+
+import sys
+
+def main():
+    agent_tag = sys.argv[2]
+    if sys.argv[1] == 'add':
+        print('added', agent_tag)
+    elif sys.argv[1] == 'remove':
+        print('removed', agent_tag)
+
+if __name__ == '__main__':
+    main()
+
