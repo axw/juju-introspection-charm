@@ -3,6 +3,7 @@ Description=JujuIntrospection
 
 [Service]
 ExecStart={{executable}} -addr "{{addr}}" -hook "{{hook}}"
+Environment="JUJU_UNIT_NAME={{unit_name}}"
 Restart=on-failure
 TimeoutSec=300
 

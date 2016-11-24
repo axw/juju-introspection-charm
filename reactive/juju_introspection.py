@@ -1,8 +1,18 @@
 import os
 import subprocess
 
-from charms.reactive import when, when_not, set_state
-from charmhelpers.core import hookenv, templating
+from charms.reactive import (
+    remove_state,
+    set_state,
+    when,
+    when_not,
+)
+
+from charmhelpers.core import (
+    hookenv,
+    templating,
+    unitdata,
+)
 
 GOPATH = os.path.abspath('./gopath')
 
@@ -38,7 +48,8 @@ def update_systemd_unit():
     subprocess.check_call(['systemctl', 'daemon-reload'])
     subprocess.check_call(['systemctl', 'restart', 'juju-introspection'])
 
-    hookenv.close_port(old_port)
+    if old_port:
+        hookenv.close_port(old_port)
     hookenv.open_port(new_port)
 
 
@@ -49,9 +60,43 @@ def write_systemd_unit(port):
       'juju-introspection.service',
       '/etc/systemd/system/juju-introspection.service',
       {
+        'addr':       listen_addr,
         'executable': os.path.join(GOPATH, 'bin', 'juju-introspection-proxy'),
-        'addr': listen_addr,
-        'hook': juju_introspection_hook,
+        'hook':       juju_introspection_hook,
+        'unit_name':  hookenv.local_unit(),
       },
     )
+
+
+@when('prometheus.available')
+@when('juju-introspection.agents-changed')
+def agents_changed(prometheus):
+    config = hookenv.config()
+    port = config['port']
+    
+    kv = unitdata.kv()
+    agents = kv.getrange('agent.', strip=True)
+    for name, state in agents.items():
+        # TODO(axw) the prometheus interface currently
+        # assumes that a relation strand can describe
+        # only one prometheus target. We should request
+        # a change to the interface to support multiple.
+        #
+        # Alternatively, when promreg is enabled by
+        # default, and can be used without additional
+        # configuration, we could use that instead.
+        if not name.startswith('machine-'):
+            continue
+        if state == 'register':
+            path = '/agents/{}/metrics'.format(name)
+            prometheus.configure(port, path)
+            kv.set('agent.' + name, 'registered')
+            break
+        else:
+            # TODO(axw) the prometheus interface does
+            # not support deregistering a target. This
+            # only matters if/when we support registering
+            # unit agent targets.
+            pass
+    remove_state('juju-introspection.agents-changed')
 

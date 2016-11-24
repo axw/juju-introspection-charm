@@ -1,14 +1,59 @@
 #!/usr/bin/python3
 
+import os
 import sys
 
+
 def main():
+    from charmhelpers.core import unitdata
+    from charms.reactive import set_state
+    import charms.reactive
+
+    # When an agent is seen, we add it to the
+    # juju-introspection unit's unitdata, with
+    # the key "agent.<unit-name>". A value of
+    # "register" indicates that the agent should
+    # be registered with Prometheus/promreg.
+    # A value of "registered" indicates that it
+    # is already registered. Finally, a value of
+    # "deregister" indicates that the agent
+    # should be dergistered from Prometheus/promreg.
+    kv = unitdata.kv()
+    op = sys.argv[1]
     agent_tag = sys.argv[2]
-    if sys.argv[1] == 'add':
-        print('added', agent_tag)
-    elif sys.argv[1] == 'remove':
-        print('removed', agent_tag)
+    key = 'agent.' + agent_tag
+    if op == 'add':
+        if kv.get(key) != 'registered':
+            kv.set(key, 'register')
+    elif op == 'remove':
+        previous = kv.get(key)
+        if previous == 'register':
+            kv.unset(key)
+        elif previous == 'registered':
+            kv.set(key, "deregister")
+    else:
+        raise Exception('invalid op ' + op)
+
+    # Defer to reactive code to update relations.
+    set_state('juju-introspection.agents-changed')
+    charms.reactive.main()
+
+
+def juju_run():
+    JUJU_UNIT_NAME = os.environ.get('JUJU_UNIT_NAME')
+    path = '/usr/bin/juju-run'
+    args = sys.argv[:]
+    args[0] = os.path.abspath(args[0])
+    args = [path, JUJU_UNIT_NAME, ' '.join(args)]
+    os.execv(path, args)
+
 
 if __name__ == '__main__':
+    # This program is executed directly by the juju-introspection-proxy
+    # process, which does not have the JUJU_AGENT_SOCKET environment
+    # variable # set. We use this as an indicator to call the program
+    # again using "juju-run", to get a hook execution context.
+    if not os.environ.get('JUJU_AGENT_SOCKET', None):
+        juju_run()
     main()
 
